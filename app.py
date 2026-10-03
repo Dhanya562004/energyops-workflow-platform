@@ -130,9 +130,12 @@ user_role = st.sidebar.selectbox("Simulated Role:", ["Admin (Full Override)", "M
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔐 Streamlit Secrets Status")
 if API_KEY:
-    st.sidebar.success(f"🔒 **Secrets Loaded**: API Key `{API_KEY[:6]}...` authenticated.")
+    if API_KEY.startswith("AQ.Ab"):
+        st.sidebar.success(f"🔒 **Verified API Key**: Format starting with `AQ.Ab...` is authenticated.")
+    else:
+        st.sidebar.success(f"🔒 **Secrets Loaded**: API Key `{API_KEY[:6]}...` authenticated.")
 else:
-    st.sidebar.info("💡 Running in local DB mode. To use Streamlit Secrets, add `ENERGYOPS_API_KEY` in Streamlit Cloud Settings.")
+    st.sidebar.info("💡 Running in local DB mode. To use Streamlit Secrets, add `ENERGYOPS_API_KEY` (starting with `AQ.Ab...`) in Streamlit Cloud Settings.")
 
 # ==============================================================================
 # VIEW 1: 📊 Command Center
@@ -425,7 +428,7 @@ elif nav_choice == "🔐 Streamlit Secrets Guide":
     2. Paste your secret configuration in TOML format:
 
     ```toml
-    ENERGYOPS_API_KEY = "eo_live_9843279482934892"
+    ENERGYOPS_API_KEY = "AQ.Ab1234567890abcdefghijklmnopqrstuvwxyz"
     BACKEND_URL = "https://your-express-backend.render.com/api"
     ENVIRONMENT = "production"
     ADMIN_PASSWORD = "your_secure_password"
