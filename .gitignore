@@ -18,6 +18,7 @@ backend/*.db
 *.log
 npm-debug.log*
 
-# Environment
-.env
-.DS_Store
+# Streamlit secrets
+.streamlit/secrets.toml
+!.streamlit/secrets.toml.example
+
