@@ -1,0 +1,26 @@
+{
+  "name": "energyops-workflow-platform",
+  "version": "1.4.2",
+  "description": "EnergyOps - Enterprise Installation Workflow & Operations Platform",
+  "scripts": {
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "seed": "cd backend && npm run seed",
+    "test": "cd backend && npm test"
+  },
+  "keywords": [
+    "energyops",
+    "workflow",
+    "angular",
+    "typescript",
+    "sqlite",
+    "express",
+    "graphql",
+    "operations-platform"
+  ],
+  "author": "Deeksha / EnergyOps Engineering",
+  "license": "MIT"
+}
