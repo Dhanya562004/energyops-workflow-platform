@@ -1,4 +1,6 @@
-# ⚡ EnergyOps – Installation Workflow & Operations Platform
+# ⚡ EnergyOps – Enterprise Installation Workflow & Operations Platform
+
+<div align="center">
 
 [![Live Streamlit App](https://img.shields.io/badge/Live_Demo-Streamlit_Cloud-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://energyops-workflow-platform-mcwfe3b7hcmhuf7ykaxetd.streamlit.app/)
 [![Angular 18](https://img.shields.io/badge/Frontend-Angular_18-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.io)
@@ -7,33 +9,36 @@
 [![SQLite](https://img.shields.io/badge/Database-SQLite_3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org)
 [![Tests Passed](https://img.shields.io/badge/Tests-11_Passed_Vitest-22c55e?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev)
 
-> **Enterprise Energy Installation Workflow, Operational Telemetry, and Incidents Management Platform**  
-> 🔗 **Live Cloud App**: [https://energyops-workflow-platform-mcwfe3b7hcmhuf7ykaxetd.streamlit.app/](https://energyops-workflow-platform-mcwfe3b7hcmhuf7ykaxetd.streamlit.app/)  
-> 📂 **GitHub Repository**: [https://github.com/Dhanya562004/energyops-workflow-platform.git](https://github.com/Dhanya562004/energyops-workflow-platform.git)
+**Enterprise-Grade Clean Energy Installation Operations, Kanban Pipeline & Telemetry Engine**
+
+[🌐 **Explore Live Cloud App**](https://energyops-workflow-platform-mcwfe3b7hcmhuf7ykaxetd.streamlit.app/) • [📂 **GitHub Repository**](https://github.com/Dhanya562004/energyops-workflow-platform.git)
 
 ---
+</div>
 
-## 📌 Executive Summary & Problem Statement
+## 📌 Executive Overview & Problem Statement
 
-Clean energy installation companies (solar, microgrid systems, industrial battery storage, EV charging hubs, and wind turbines) face severe operational friction across job lifecycles. Standard CRUD dashboards fail to handle real-world operational challenges:
+Clean energy installation enterprises (Commercial Solar, Microgrid Systems, Industrial Battery Storage, EV Charging Infrastructure, Wind Turbines) require strict lifecycle management. Standard CRUD dashboards fail to address real-world operational challenges:
 
-1. **Strict Stage Transition Guards**: Moving a contract forward without completed design reviews or approved municipal permits leads to costly site re-work and compliance fines.
-2. **Operational Blocker Escalation**: Supply-chain delays, utility interconnect rejections, and structural roof reinforcements require automatic alert triggers (>24h blocked) and incident resolution workflows.
+1. **Strict Stage Transition Validation**: Advancing a job before completing engineering design reviews or securing municipal permits results in site re-work and compliance fines.
+2. **Incident & Blocker Escalation**: Supply-chain stalls, utility interconnect delays, and roof reinforcement requirements demand automatic alert dispatching (>24h blocked).
 3. **Multi-Role Governance**: Admins, Operational Managers, and Field Lead Engineers require role-scoped actions (e.g. stage sequence overrides vs field progress logging).
-4. **Real-Time Observability & Telemetry**: Tracking labor-hour budget variances, permit overdue risks, and API endpoint latencies.
+4. **Real-Time Observability**: Tracking labor-hour budget variances, permit overdue risks, and API endpoint response latencies.
 
 **EnergyOps** addresses these enterprise challenges as a full-stack engineering platform combining an **Angular 18 SPA**, a **Node.js/Express TypeScript REST & GraphQL API server**, a **relational SQLite database**, and a **Python Streamlit Executive Dashboard** deployed on Streamlit Cloud with secure Streamlit Secrets (`st.secrets["ENERGYOPS_API_KEY"]`).
 
 ---
 
-## 🚀 Live Cloud Deployment & Links
+## 🌟 Key Platform Features
 
-| Service | Technology | Status / Link |
-| :--- | :--- | :--- |
-| **Streamlit Production App** | Streamlit + Python 3.13 + Plotly | [🌐 Launch Live App](https://energyops-workflow-platform-mcwfe3b7hcmhuf7ykaxetd.streamlit.app/) |
-| **Angular 18 Client** | Angular 18 + SCSS + RxJS | `http://localhost:4200` (Local) |
-| **Node.js REST API** | Express + TypeScript + SQLite | `http://localhost:3000/api` (Local) |
-| **GraphQL Bonus Layer** | GraphQL Engine | `http://localhost:3000/graphql` (Local) |
+| Feature Module | Capabilities |
+| :--- | :--- |
+| **📊 Executive Command Center** | Real-time KPI cards (Active, Completed, Delayed, Blocked jobs, Avg Cycle Time), interactive Plotly stage breakdown & status distribution charts, filterable table. |
+| **🗂️ Kanban Workflow Pipeline** | 9 swimlane columns (`Site Assessment` ➔ `Completion`) with stage transition validation, blocker indicators, and instant sync. |
+| **📋 Jobs Registry** | Master contract database, filtering by product/engineer/stage/status, and interactive form to create & publish new installation contracts. |
+| **🚨 Operational Incidents** | Real-time incident desk detecting blocked jobs, overdue permits, and cost overruns with 1-click acknowledgement. |
+| **📈 System Telemetry** | API throughput counters, success rate %, average latency percentiles, client error interceptor logs, and telemetry simulation tools. |
+| **👥 Role-Based Governance** | Simulated role switching between **Admin** (stage override), **Manager** (approvals & blocker resolution), and **Engineer** (field progress logging). |
 
 ---
 
@@ -47,7 +52,7 @@ flowchart TB
         stPlotly["Plotly Executive Analytics"]
     end
 
-    subgraph AngularClient["Angular 18 Enterprise SPA"]
+    subgraph AngularClient["Angular 18 Enterprise Client"]
         Navbar["Navbar & Role Switcher (Admin / Manager / Engineer)"]
         Dash["Command Center Dashboard"]
         Kanban["Kanban Drag & Drop Board (@angular/cdk)"]
@@ -66,7 +71,7 @@ flowchart TB
     end
 
     subgraph RelationalDB["SQLite Storage (energyops.db)"]
-        Jobs[("jobs (28 contracts)")]
+        Jobs[("jobs (25+ contracts)")]
         Users[("users (Admin/Manager/Engineer)")]
         History[("job_history (Audit Trail)")]
         Blockers[("blockers (Active & Resolved)")]
@@ -95,7 +100,7 @@ flowchart TB
 ```mermaid
 stateDiagram-v2
     [*] --> SiteAssessment: Contract Signed
-    SiteAssessment --> SystemDesign: Initial Survey Complete
+    SiteAssessment --> SystemDesign: Site Survey Complete
     SystemDesign --> DesignReview: Schematics Submitted
     DesignReview --> PermitSubmission: PE Stamp Approved
     PermitSubmission --> PermitApproval: Municipal Review
@@ -115,34 +120,25 @@ stateDiagram-v2
 1. **Site Assessment** ➔ 2. **System Design** ➔ 3. **Design Review** ➔ 4. **Permit Submission** ➔ 5. **Permit Approval** ➔ 6. **Scheduling** ➔ 7. **Installation** ➔ 8. **Inspection** ➔ 9. **Completion**
 
 ### Workflow Validation Rules
-- **Sequential Enforcer**: Non-admin users must advance stages sequentially (e.g. Stage 2 ➔ Stage 3). Skipping stages without Admin authorization is rejected (400 Bad Request).
-- **Blocker Status Lockout**: If a job status is set to `Blocked`, stage advancement is locked until active blockers are resolved.
+- **Sequential Guard**: Non-admin users must advance stages sequentially (e.g. Stage 2 ➔ Stage 3). Skipping stages without Admin authorization is rejected (400 Bad Request).
+- **Blocker Lockout**: If a job status is set to `Blocked`, stage advancement is locked until active blockers are resolved.
 - **Admin Override**: Admin role can override workflow sequence with audit history recording.
-
----
-
-## 👥 Role-Based Access Control (Simulated RBAC)
-
-The platform features simulated role switching:
-- 🔴 **Admin**: Full stage sequence override, database re-seeding, configuration management.
-- 🔵 **Manager**: Stage approvals, assigning lead engineers, resolving active blockers, target date adjustments.
-- 🟢 **Engineer**: Updating installation progress %, logging actual labor hours, flagging blockers, posting field notes.
 
 ---
 
 ## 🛠️ Technology Stack Breakdown
 
-### 🎨 Frontend & Executive Apps
+### Frontend & Executive Apps
+- **Streamlit (Python 3.13)**: Deployed on Streamlit Cloud, Plotly charts, Streamlit Secrets integration.
 - **Angular 18+**: Standalone Components, Signals / RxJS Streams, Reactive Forms.
-- **Streamlit (Python 3.13)**: Executive Command Center, Plotly visualization engine, Streamlit Secrets integration.
 - **Styling**: SCSS Design System with CSS Custom Variables, Dark & Light Mode toggle.
 - **Drag & Drop**: `@angular/cdk/drag-drop` (Kanban Board Interaction).
 
-### ⚙️ Backend & Storage
+### Backend & Storage
 - **Node.js v22+ & Express.js**: TypeScript server architecture (`ts-node`).
 - **SQLite (`better-sqlite3`)**: Relational database engine with foreign key enforcement and indexes.
 - **APIs**: REST API + Bonus GraphQL Query Endpoint (`/graphql`).
-- **Testing**: Vitest + Supertest (11 passing tests).
+- **Testing**: Vitest + Supertest (11 passing integration tests).
 
 ---
 
@@ -194,17 +190,16 @@ query GetHighPrioritySolarJobs {
 
 ## 🔐 Streamlit Secrets Configuration Guide
 
-To deploy this platform on **Streamlit Community Cloud** with secure secrets:
+To configure secrets on **Streamlit Community Cloud**:
 
-1. Go to [share.streamlit.io](https://share.streamlit.io) and connect your repository `Dhanya562004/energyops-workflow-platform`.
+1. Go to [share.streamlit.io](https://share.streamlit.io) and open your app settings.
 2. Go to **App Settings** -> **Secrets**.
-3. Add your configuration starting with your `AQ.Ab...` format API key:
+3. Paste your configuration starting with your `AQ.Ab...` format API key:
 
 ```toml
 ENERGYOPS_API_KEY = "AQ.Ab1234567890abcdefghijklmnopqrstuvwxyz"
-BACKEND_URL = "http://localhost:3000/api"
+BACKEND_URL = "https://your-express-backend.render.com/api"
 ENVIRONMENT = "production"
-ADMIN_PASSWORD = "energyops_admin_pass"
 ```
 
 4. Click **Save**. The Streamlit app detects `st.secrets["ENERGYOPS_API_KEY"]` automatically!
@@ -242,13 +237,13 @@ In clean energy companies (e.g., Tesla Energy, Sunrun, NextEra Energy, ChargePoi
 
 ---
 
-## 🚀 Local Quickstart & Setup Guide
+## 🚀 Local Quickstart Guide
 
 ### 1. Backend Setup
 ```bash
 cd backend
 npm install
-npm run seed      # Seeds 28 realistic energy installation contracts
+npm run seed      # Seeds 25+ realistic energy installation contracts
 npm start         # Express API runs on http://localhost:3000
 ```
 
@@ -259,8 +254,9 @@ npm install
 npm start         # Angular CLI dev server runs on http://localhost:4200
 ```
 
-### 3. Streamlit Local Setup
+### 3. Streamlit App Local Setup
 ```bash
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
