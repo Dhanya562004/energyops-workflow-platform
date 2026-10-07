@@ -263,4 +263,4 @@ streamlit run app.py
 ---
 
 ## 📄 License
-MIT © Deeksha / EnergyOps Platform Engineering
+MIT © Dhanya K / EnergyOps Platform Engineering
