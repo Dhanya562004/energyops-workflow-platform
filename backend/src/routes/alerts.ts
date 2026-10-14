@@ -73,8 +73,7 @@ router.patch(
   (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { acknowledgedBy } = req.body;
-      const effectiveName = req.user?.name || acknowledgedBy || 'Operational Admin';
+      const effectiveName = req.user!.name;
 
       const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
       if (!alert) {

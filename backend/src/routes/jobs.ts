@@ -286,15 +286,22 @@ router.patch(
   (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { newStage, userRole, userName, override = false, reason } = req.body;
+      const { newStage, override = false, reason } = req.body;
 
-      const effectiveRole = req.user?.role || userRole || 'Engineer';
-      const effectiveName = req.user?.name || userName || 'System User';
+      const effectiveRole = req.user!.role;
+      const effectiveName = req.user!.name;
 
       const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
       if (!job) {
         const err: AppError = new Error(`Job ${id} not found`);
         err.statusCode = 404;
+        return next(err);
+      }
+
+      if (override && effectiveRole !== 'Admin') {
+        const err: AppError = new Error(`Role "${effectiveRole}" is unauthorized to execute stage sequence override.`);
+        err.statusCode = 403;
+        err.code = 'FORBIDDEN_ACTION';
         return next(err);
       }
 
@@ -376,8 +383,8 @@ router.patch(
   (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { status, blockerReason, userName } = req.body;
-      const effectiveName = req.user?.name || userName || 'System User';
+      const { status, blockerReason } = req.body;
+      const effectiveName = req.user!.name;
 
       const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
       if (!job) {
@@ -438,8 +445,8 @@ router.post(
   (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { reason, createdBy } = req.body;
-      const effectiveName = req.user?.name || createdBy || 'Engineer';
+      const { reason } = req.body;
+      const effectiveName = req.user!.name;
 
       const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
       if (!job) {
@@ -495,7 +502,7 @@ router.post(
   (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { author, role, content } = req.body;
+      const { content } = req.body;
 
       if (!content || typeof content !== 'string' || content.trim().length === 0) {
         const err: AppError = new Error('content is required');
@@ -503,8 +510,8 @@ router.post(
         return next(err);
       }
 
-      const effectiveAuthor = req.user?.name || author || 'User';
-      const effectiveRole = req.user?.role || role || 'Engineer';
+      const effectiveAuthor = req.user!.name;
+      const effectiveRole = req.user!.role;
 
       const now = new Date().toISOString();
       const noteId = `NTE-${Date.now()}`;

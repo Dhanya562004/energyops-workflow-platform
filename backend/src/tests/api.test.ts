@@ -3,6 +3,7 @@ import request from 'supertest';
 import app from '../index';
 import { initDb } from '../db/database';
 import { seedDatabase } from '../db/seed';
+import { generateToken, AuthUser } from '../middleware/authMiddleware';
 
 beforeAll(() => {
   initDb();
@@ -10,6 +11,21 @@ beforeAll(() => {
 });
 
 describe('EnergyOps Backend REST & GraphQL API Integration Tests', () => {
+  const managerUser: AuthUser = {
+    id: 'USR-MGR-TEST',
+    name: 'Amanda Torres',
+    email: 'amanda.torres@energyops.com',
+    role: 'Manager'
+  };
+  const engineerUser: AuthUser = {
+    id: 'USR-ENG-TEST',
+    name: 'Aisha Khan',
+    email: 'aisha.khan@energyops.com',
+    role: 'Engineer'
+  };
+
+  const managerToken = generateToken(managerUser);
+  const engineerToken = generateToken(engineerUser);
   
   it('1. GET /api/jobs - should return list of jobs with pagination metadata', async () => {
     const res = await request(app).get('/api/jobs?page=1&limit=5');
@@ -48,7 +64,11 @@ describe('EnergyOps Backend REST & GraphQL API Integration Tests', () => {
       estimatedHours: 150
     };
 
-    const res = await request(app).post('/api/jobs').send(newJob);
+    const res = await request(app)
+      .post('/api/jobs')
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send(newJob);
+
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.customerName).toBe('Test Energy Grid LLC');
@@ -59,10 +79,9 @@ describe('EnergyOps Backend REST & GraphQL API Integration Tests', () => {
     // JOB-1005 is at Site Assessment
     const res = await request(app)
       .patch('/api/jobs/JOB-1005/stage')
+      .set('Authorization', `Bearer ${engineerToken}`)
       .send({
-        newStage: 'System Design',
-        userRole: 'Engineer',
-        userName: 'Aisha Khan'
+        newStage: 'System Design'
       });
 
     expect(res.status).toBe(200);
@@ -73,10 +92,9 @@ describe('EnergyOps Backend REST & GraphQL API Integration Tests', () => {
     // Trying to skip from System Design straight to Completion without Admin override
     const res = await request(app)
       .patch('/api/jobs/JOB-1005/stage')
+      .set('Authorization', `Bearer ${engineerToken}`)
       .send({
-        newStage: 'Completion',
-        userRole: 'Engineer',
-        userName: 'Aisha Khan'
+        newStage: 'Completion'
       });
 
     expect(res.status).toBe(400);
@@ -87,9 +105,9 @@ describe('EnergyOps Backend REST & GraphQL API Integration Tests', () => {
   it('7. POST /api/jobs/:id/blockers - should flag job as blocked with reason', async () => {
     const res = await request(app)
       .post('/api/jobs/JOB-1007/blockers')
+      .set('Authorization', `Bearer ${engineerToken}`)
       .send({
-        reason: 'Transformer supply chain delay from vendor',
-        createdBy: 'Elena Rostova'
+        reason: 'Transformer supply chain delay from vendor'
       });
 
     expect(res.status).toBe(201);
@@ -101,8 +119,8 @@ describe('EnergyOps Backend REST & GraphQL API Integration Tests', () => {
     // BLK-501 belongs to JOB-1002
     const res = await request(app)
       .patch('/api/blockers/BLK-501/resolve')
+      .set('Authorization', `Bearer ${managerToken}`)
       .send({
-        resolvedBy: 'Robert Sterling',
         resolutionNotes: 'Interconnect agreement signed by regional utility board.'
       });
 

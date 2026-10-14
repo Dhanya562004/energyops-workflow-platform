@@ -13,8 +13,8 @@ router.patch(
   (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { resolvedBy, resolutionNotes } = req.body;
-      const effectiveResolver = req.user?.name || resolvedBy || 'Manager';
+      const { resolutionNotes } = req.body;
+      const effectiveResolver = req.user!.name;
 
       const blocker = db.prepare('SELECT * FROM blockers WHERE id = ?').get(id) as any;
       if (!blocker) {

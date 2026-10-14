@@ -45,9 +45,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   try {
     const authHeader = req.headers.authorization;
     const apiKeyHeader = req.headers['x-api-key'] as string;
-    const devRole = req.headers['x-user-role'] as string;
-    const devName = req.headers['x-user-name'] as string;
-
     // 1. Bearer JWT Token
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim();
@@ -70,9 +67,9 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       if (apiKeyHeader.startsWith('AQ.Ab') || apiKeyHeader === process.env.ENERGYOPS_API_KEY) {
         req.user = {
           id: 'SYS-SERVICE-1',
-          name: devName || 'Streamlit Cloud Executive',
+          name: 'Streamlit Cloud Executive',
           email: 'streamlit@energyops.internal',
-          role: (devRole as any) || 'Admin'
+          role: 'Admin'
         };
         return next();
       } else {
@@ -83,37 +80,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       }
     }
 
-    // 3. Fallback dev role header or body (for backward-compatible internal UI simulation)
-    const effectiveRole =
-      devRole ||
-      (req.body && (
-        req.body.userRole ||
-        req.body.role ||
-        (req.body.assignedManager ? 'Manager' : undefined) ||
-        (req.body.resolvedBy ? 'Manager' : undefined) ||
-        (req.body.createdBy ? 'Engineer' : undefined)
-      ));
-    const effectiveName =
-      devName ||
-      (req.body && (
-        req.body.userName ||
-        req.body.author ||
-        req.body.createdBy ||
-        req.body.resolvedBy ||
-        req.body.assignedManager
-      ));
-
-    if (effectiveRole && ['Admin', 'Manager', 'Engineer'].includes(effectiveRole)) {
-      req.user = {
-        id: `USR-${effectiveRole.toUpperCase()}`,
-        name: effectiveName || `${effectiveRole} User`,
-        email: `${effectiveRole.toLowerCase()}@energyops.internal`,
-        role: effectiveRole as any
-      };
-      return next();
-    }
-
-    // Unauthenticated
+    // Unauthenticated (no valid JWT bearer token or API key provided)
     req.user = undefined;
     return next();
   } catch (err) {
