@@ -12,3 +12,5 @@ services:
         value: production
       - key: DB_PATH
         value: ./energyops.db
+      - key: NODE_VERSION
+        value: 24
