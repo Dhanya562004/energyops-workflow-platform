@@ -4,7 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
 import { JobService } from '../../services/job.service';
-import { Job, JobQueryParams, JobStats, WORKFLOW_STAGES, WORKFLOW_STATUSES, PRODUCT_TYPES } from '../../models/job.model';
+import { Job, JobQueryParams, JobStats, WORKFLOW_STAGES, WORKFLOW_STATUSES } from '../../models/job.model';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 import { StageBadgeComponent } from '../../shared/components/stage-badge/stage-badge.component';
 import { PriorityBadgeComponent } from '../../shared/components/priority-badge/priority-badge.component';

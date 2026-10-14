@@ -1,0 +1,116 @@
+# ==============================================================================
+# EnergyOps Workflow Platform - Azure DevOps Pipeline Definition
+# Cloud-native CI/CD orchestration mirroring GitHub Actions.
+# Status Note: Authored and schema-verified; marked as "Not yet run on Azure DevOps"
+# per Hard Rule 2 & 6 until an Azure DevOps organization is connected.
+# ==============================================================================
+trigger:
+  branches:
+    include:
+      - main
+      - upgrade/jd-alignment
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  NODE_VERSION: '20.x'
+
+stages:
+  # ----------------------------------------------------------------------------
+  # Stage 1: Validation, Linting, & Unit Testing
+  # ----------------------------------------------------------------------------
+  - stage: ContinuousIntegration
+    displayName: 'CI - Lint, Test & Build'
+    jobs:
+      - job: BackendQuality
+        displayName: 'Backend (Node/TypeScript/Vitest)'
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js $(NODE_VERSION)'
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: |
+              npm ci
+            displayName: 'Install Backend Dependencies'
+            workingDirectory: backend
+
+          - script: |
+              npm run lint
+            displayName: 'Run Backend ESLint'
+            workingDirectory: backend
+
+          - script: |
+              npm test
+            displayName: 'Run Vitest Unit & Security Tests'
+            workingDirectory: backend
+
+          - script: |
+              npm run build
+            displayName: 'Compile TypeScript to dist/'
+            workingDirectory: backend
+
+      - job: FrontendQuality
+        displayName: 'Frontend (Angular/NgRx/Karma)'
+        steps:
+          - task: NodeTool@0
+            displayName: 'Install Node.js $(NODE_VERSION)'
+            inputs:
+              versionSpec: $(NODE_VERSION)
+
+          - script: |
+              npm ci
+            displayName: 'Install Frontend Dependencies'
+            workingDirectory: frontend
+
+          - script: |
+              npm run lint
+            displayName: 'Run Frontend ESLint'
+            workingDirectory: frontend
+
+          - script: |
+              npx ng test --no-watch --browsers=ChromeHeadless
+            displayName: 'Run Karma Tests & WCAG 2.1 AA Audit'
+            workingDirectory: frontend
+
+          - script: |
+              npm run build
+            displayName: 'Build Angular Production Distribution'
+            workingDirectory: frontend
+
+  # ----------------------------------------------------------------------------
+  # Stage 2: OCI Container Image Packaging
+  # ----------------------------------------------------------------------------
+  - stage: ContainerPackaging
+    displayName: 'OCI Container Packaging'
+    dependsOn: ContinuousIntegration
+    condition: succeeded()
+    jobs:
+      - job: BuildContainers
+        displayName: 'Docker Build & Validation'
+        steps:
+          - task: Docker@2
+            displayName: 'Build Backend Docker Image'
+            inputs:
+              command: 'build'
+              Dockerfile: 'backend/Dockerfile'
+              buildContext: 'backend'
+              tags: |
+                energyops-backend:$(Build.BuildId)
+                energyops-backend:latest
+
+          - task: Docker@2
+            displayName: 'Build Frontend Nginx Docker Image'
+            inputs:
+              command: 'build'
+              Dockerfile: 'frontend/Dockerfile'
+              buildContext: 'frontend'
+              tags: |
+                energyops-frontend:$(Build.BuildId)
+                energyops-frontend:latest

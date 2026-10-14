@@ -11,46 +11,58 @@ import { UserRole } from '../../../models/user.model';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <header class="navbar-container">
+    <header class="navbar-container" role="banner" aria-label="EnergyOps Platform Navigation Bar">
       <div class="navbar-left">
-        <a routerLink="/" class="brand-link">
-          <div class="brand-logo">⚡</div>
+        <a routerLink="/" class="brand-link" aria-label="EnergyOps Home Command Center">
+          <div class="brand-logo" aria-hidden="true">⚡</div>
           <div class="brand-text">
             <span class="brand-name">EnergyOps</span>
-            <span class="brand-sub">Installation Workflow Platform</span>
+            <span class="brand-sub">Installation Platform</span>
           </div>
         </a>
-        <div class="system-status" title="Backend API Healthy">
-          <span class="status-pulse"></span>
+        <div class="system-status" title="Backend API Healthy" role="status" aria-label="System status: API v1.4.2 Healthy">
+          <span class="status-pulse" aria-hidden="true"></span>
           <span class="status-label">API v1.4.2</span>
         </div>
       </div>
 
       <div class="navbar-right">
         <!-- Operational Alerts Link -->
-        <a routerLink="/alerts" class="alerts-btn" title="Operational Alerts">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <a 
+          routerLink="/alerts" 
+          class="alerts-btn" 
+          title="Operational Alerts" 
+          [attr.aria-label]="'Operational Incidents Desk. ' + ((alertService.activeCount$ | async) || 0) + ' active incidents'"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
           </svg>
-          <span *ngIf="(alertService.activeCount$ | async) as count" class="alert-count-badge">
+          <span *ngIf="(alertService.activeCount$ | async) as count" class="alert-count-badge" aria-hidden="true">
             {{ count }}
           </span>
         </a>
 
         <!-- Theme Switcher -->
-        <button class="theme-toggle-btn" (click)="themeService.toggleTheme()" [title]="'Switch to ' + (themeService.currentTheme === 'dark' ? 'Light' : 'Dark') + ' Mode'">
-          <span *ngIf="themeService.currentTheme === 'dark'">☀️</span>
-          <span *ngIf="themeService.currentTheme === 'light'">🌙</span>
+        <button 
+          type="button"
+          class="theme-toggle-btn" 
+          (click)="themeService.toggleTheme()" 
+          [attr.aria-label]="'Switch to ' + (themeService.currentTheme === 'dark' ? 'Light' : 'Dark') + ' theme'"
+        >
+          <span *ngIf="themeService.currentTheme === 'dark'" aria-hidden="true">☀️</span>
+          <span *ngIf="themeService.currentTheme === 'light'" aria-hidden="true">🌙</span>
         </button>
 
         <!-- Role Switcher -->
         <div class="role-switcher">
-          <label class="role-label">Simulated Role:</label>
+          <label for="role-select" class="role-label">Role:</label>
           <select 
+            id="role-select"
             [value]="roleService.currentRole" 
             (change)="onRoleChange($event)"
             class="role-select"
+            aria-label="Switch active simulated user role"
           >
             <option value="Admin">Admin (Full Override)</option>
             <option value="Manager">Manager (Approvals)</option>
@@ -59,8 +71,8 @@ import { UserRole } from '../../../models/user.model';
         </div>
 
         <!-- User Profile Pill -->
-        <div class="user-pill" *ngIf="roleService.activeUser$ | async as user">
-          <img [src]="user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'" class="user-avatar" [alt]="user.name">
+        <div class="user-pill" *ngIf="roleService.activeUser$ | async as user" role="group" [attr.aria-label]="'Logged in user ' + user.name">
+          <img [src]="user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'" class="user-avatar" [alt]="user.name + ' avatar'">
           <div class="user-info">
             <span class="user-name">{{ user.name }}</span>
             <span class="user-role-badge" [ngClass]="user.role.toLowerCase()">{{ user.role }}</span>
@@ -71,17 +83,19 @@ import { UserRole } from '../../../models/user.model';
   `,
   styles: [`
     .navbar-container {
-      height: 64px;
+      min-height: 64px;
       background: var(--bg-surface, #1e293b);
       border-bottom: 1px solid var(--border-color, #334155);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 24px;
+      padding: 0 var(--space-6, 24px);
       position: sticky;
       top: 0;
       z-index: 100;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      flex-wrap: wrap;
+      gap: 12px;
     }
     .navbar-left {
       display: flex;
@@ -93,6 +107,7 @@ import { UserRole } from '../../../models/user.model';
       align-items: center;
       gap: 10px;
       text-decoration: none;
+      &:focus-visible { outline: 2px solid var(--accent); border-radius: 8px; }
     }
     .brand-logo {
       width: 38px;
@@ -144,7 +159,8 @@ import { UserRole } from '../../../models/user.model';
     .navbar-right {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .alerts-btn {
@@ -160,6 +176,7 @@ import { UserRole } from '../../../models/user.model';
       text-decoration: none;
       svg { width: 20px; height: 20px; }
       &:hover { background: #475569; }
+      &:focus-visible { outline: 2px solid var(--accent); }
     }
     .alert-count-badge {
       position: absolute;
@@ -190,14 +207,15 @@ import { UserRole } from '../../../models/user.model';
       align-items: center;
       justify-content: center;
       &:hover { background: #475569; }
+      &:focus-visible { outline: 2px solid var(--accent); }
     }
 
     .role-switcher {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: var(--bg-darker, #0f172a);
-      padding: 5px 12px;
+      padding: 5px 10px;
       border-radius: 8px;
       border: 1px solid var(--border-color, #334155);
     }
@@ -211,19 +229,20 @@ import { UserRole } from '../../../models/user.model';
       border: none;
       color: #38bdf8;
       font-weight: 700;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       cursor: pointer;
       outline: none;
+      &:focus-visible { outline: 2px solid var(--accent); }
     }
 
     .user-pill {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .user-avatar {
-      width: 34px;
-      height: 34px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       object-fit: cover;
       border: 2px solid #3b82f6;
@@ -233,7 +252,7 @@ import { UserRole } from '../../../models/user.model';
       flex-direction: column;
     }
     .user-name {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 700;
       color: var(--text-main, #f8fafc);
     }
@@ -244,6 +263,19 @@ import { UserRole } from '../../../models/user.model';
       &.admin { color: #f43f5e; }
       &.manager { color: #38bdf8; }
       &.engineer { color: #34d399; }
+    }
+
+    /* Responsive Queries */
+    @media (max-width: 768px) {
+      .navbar-container {
+        padding: 8px 16px;
+      }
+      .brand-sub { display: none; }
+      .system-status { display: none; }
+    }
+    @media (max-width: 480px) {
+      .user-info { display: none; }
+      .role-label { display: none; }
     }
   `]
 })

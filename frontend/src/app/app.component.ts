@@ -17,10 +17,11 @@ import { ToastComponent } from './shared/components/toast/toast.component';
   ],
   template: `
     <div class="app-layout">
+      <a href="#main-content" class="skip-link">Skip to main content</a>
       <app-navbar></app-navbar>
       <div class="app-body">
         <app-sidebar></app-sidebar>
-        <main class="main-content">
+        <main id="main-content" class="main-content" role="main" tabindex="-1">
           <router-outlet></router-outlet>
         </main>
       </div>
@@ -39,12 +40,31 @@ import { ToastComponent } from './shared/components/toast/toast.component';
     .app-body {
       display: flex;
       flex: 1;
+      position: relative;
     }
     .main-content {
       flex: 1;
-      padding: 24px 32px;
+      padding: var(--space-6, 24px) var(--space-8, 32px);
       overflow-y: auto;
       max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      outline: none;
+    }
+
+    /* Responsive Breakpoints: 768px (Tablet) & 375px (Mobile) */
+    @media (max-width: 768px) {
+      .app-body {
+        flex-direction: column;
+      }
+      .main-content {
+        padding: var(--space-4, 16px);
+      }
+    }
+    @media (max-width: 375px) {
+      .main-content {
+        padding: var(--space-3, 12px) var(--space-2, 8px);
+      }
     }
   `]
 })

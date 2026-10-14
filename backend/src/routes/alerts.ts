@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { requireAuth, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -9,8 +10,8 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status = 'All', severity = 'All' } = req.query;
 
-    let whereConditions: string[] = [];
-    let params: any[] = [];
+    const whereConditions: string[] = [];
+    const params: any[] = [];
 
     if (status !== 'All') {
       whereConditions.push('a.status = ?');
@@ -65,38 +66,44 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // PATCH /api/alerts/:id/acknowledge - Acknowledge alert
-router.patch('/:id/acknowledge', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { acknowledgedBy = 'Operational Admin' } = req.body;
+router.patch(
+  '/:id/acknowledge',
+  requireAuth,
+  requireRole('Admin', 'Manager', 'Engineer'),
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { acknowledgedBy } = req.body;
+      const effectiveName = req.user?.name || acknowledgedBy || 'Operational Admin';
 
-    const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
-    if (!alert) {
-      const err: AppError = new Error(`Alert ${id} not found`);
-      err.statusCode = 404;
-      return next(err);
+      const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
+      if (!alert) {
+        const err: AppError = new Error(`Alert ${id} not found`);
+        err.statusCode = 404;
+        return next(err);
+      }
+
+      const now = new Date().toISOString();
+
+      db.prepare(`
+        UPDATE alerts SET
+          status = 'Acknowledged',
+          acknowledgedAt = ?,
+          acknowledgedBy = ?
+        WHERE id = ?
+      `).run(now, effectiveName, id);
+
+      const updatedAlert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
+
+      res.json({
+        success: true,
+        data: updatedAlert,
+        message: `Alert ${id} acknowledged by ${effectiveName}`
+      });
+    } catch (err) {
+      next(err);
     }
-
-    const now = new Date().toISOString();
-
-    db.prepare(`
-      UPDATE alerts SET
-        status = 'Acknowledged',
-        acknowledgedAt = ?,
-        acknowledgedBy = ?
-      WHERE id = ?
-    `).run(now, acknowledgedBy, id);
-
-    const updatedAlert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id);
-
-    res.json({
-      success: true,
-      data: updatedAlert,
-      message: `Alert ${id} acknowledged by ${acknowledgedBy}`
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 export default router;

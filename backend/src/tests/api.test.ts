@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../index';
-import db, { initDb } from '../db/database';
+import { initDb } from '../db/database';
 import { seedDatabase } from '../db/seed';
 
 beforeAll(() => {
