@@ -33,7 +33,7 @@ export function generateToken(user: AuthUser, expiresIn = '8h'): string {
       role: user.role
     },
     JWT_SECRET,
-    { expiresIn }
+    { expiresIn: expiresIn as any }
   );
 }
 

@@ -1,0 +1,76 @@
+# ==============================================================================
+# EnergyOps Workflow Platform - Local & Cloud Orchestration
+# Docker Compose Multi-Container Definition
+# ==============================================================================
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # Backend Operations REST & GraphQL API
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: energyops/backend:1.0.0
+    container_name: energyops-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/usr/src/app/data/energyops.db
+      - JWT_SECRET=energyops-production-secure-key-32chars!!
+      - ENERGYOPS_API_KEY=AQ.Ab-EnergyOps-ProductionKey-2025
+    volumes:
+      - energyops-db-data:/usr/src/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - energyops-network
+
+  # ----------------------------------------------------------------------------
+  # Frontend Angular SPA (Nginx)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: energyops/frontend:1.0.0
+    container_name: energyops-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "4200:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - energyops-network
+
+# ------------------------------------------------------------------------------
+# Persistent Storage Volumes
+# ------------------------------------------------------------------------------
+volumes:
+  energyops-db-data:
+    name: energyops-sqlite-data
+    driver: local
+
+# ------------------------------------------------------------------------------
+# Isolated Bridge Network
+# ------------------------------------------------------------------------------
+networks:
+  energyops-network:
+    name: energyops-network
+    driver: bridge
