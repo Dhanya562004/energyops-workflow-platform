@@ -346,4 +346,4 @@ docker compose ps
 
 ## 📄 License
 
-MIT © Deeksha / EnergyOps Platform Engineering
+MIT © Dhanya K / EnergyOps Platform Engineering
