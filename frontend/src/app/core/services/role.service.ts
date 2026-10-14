@@ -15,6 +15,10 @@ export class RoleService {
   private activeUserSubject = new BehaviorSubject<User>(this.availableUsers[0]);
   public activeUser$: Observable<User> = this.activeUserSubject.asObservable();
 
+  private tokenCache = new Map<string, string>();
+  private currentTokenSubject = new BehaviorSubject<string | null>(null);
+  public currentToken$: Observable<string | null> = this.currentTokenSubject.asObservable();
+
   get currentUser(): User {
     return this.activeUserSubject.value;
   }
@@ -23,26 +27,86 @@ export class RoleService {
     return this.activeUserSubject.value.role;
   }
 
+  get currentToken(): string | null {
+    return this.currentTokenSubject.value;
+  }
+
+  constructor() {
+    this.initTokens();
+  }
+
+  private async initTokens(): Promise<void> {
+    for (const u of this.availableUsers) {
+      await this.fetchTokenForUser(u);
+    }
+  }
+
+  public async fetchTokenForUser(user: User): Promise<string | null> {
+    if (this.tokenCache.has(user.role)) {
+      const cached = this.tokenCache.get(user.role)!;
+      if (this.currentUser.role === user.role) {
+        this.currentTokenSubject.next(cached);
+      }
+      return cached;
+    }
+
+    try {
+      if (typeof fetch !== 'undefined') {
+        const resp = await fetch('http://localhost:3000/api/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            role: user.role,
+            name: user.name,
+            email: user.email
+          })
+        });
+        if (resp.ok) {
+          const res = await resp.json();
+          if (res.success && res.token) {
+            this.tokenCache.set(user.role, res.token);
+            if (this.currentUser.role === user.role) {
+              this.currentTokenSubject.next(res.token);
+            }
+            return res.token;
+          }
+        }
+      }
+    } catch {
+      // Backend not running or offline
+    }
+    return null;
+  }
+
   getUsers(): User[] {
     return this.availableUsers;
   }
 
   setRole(role: UserRole): void {
     const found = this.availableUsers.find(u => u.role === role);
-    if (found) {
-      this.activeUserSubject.next(found);
+    const target = found || {
+      id: `USR-TMP`,
+      name: `${role} User`,
+      email: `${role.toLowerCase()}@energyops.com`,
+      role
+    };
+    this.activeUserSubject.next(target);
+    const cached = this.tokenCache.get(role);
+    if (cached) {
+      this.currentTokenSubject.next(cached);
     } else {
-      this.activeUserSubject.next({
-        id: `USR-TMP`,
-        name: `${role} User`,
-        email: `${role.toLowerCase()}@energyops.com`,
-        role
-      });
+      this.fetchTokenForUser(target);
     }
   }
 
   setUser(user: User): void {
     this.activeUserSubject.next(user);
+    const cached = this.tokenCache.get(user.role);
+    if (cached) {
+      this.currentTokenSubject.next(cached);
+    } else {
+      this.fetchTokenForUser(user);
+    }
   }
 
   canOverrideStage(): boolean {

@@ -87,11 +87,10 @@ describe('Phase 5 Security & Authorization Tests', () => {
       expect(res.body.error.code).toBe('INVALID_TOKEN');
     });
 
-    it('should authenticate via Streamlit service API Key (AQ.Ab...)', async () => {
+    it('should authenticate via Streamlit service API Key (AQ.Ab...) without x-user-role header', async () => {
       const res = await request(app)
         .post('/api/jobs')
         .set('x-api-key', 'AQ.Ab-ValidServiceKey-Streamlit')
-        .set('x-user-role', 'Admin')
         .send({
           customerName: 'Streamlit Service Co',
           siteAddress: '400 Cloud Way, San Francisco, CA',
@@ -117,6 +116,57 @@ describe('Phase 5 Security & Authorization Tests', () => {
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
       expect(res.body.error.code).toBe('INVALID_API_KEY');
+    });
+
+    it('should reject role bypass attempt via x-user-role header with 401 UNAUTHORIZED', async () => {
+      const res = await request(app)
+        .post('/api/jobs')
+        .set('x-user-role', 'Admin')
+        .set('x-user-name', 'Attacker')
+        .send({
+          customerName: 'Bypass Co',
+          siteAddress: '123 Fake Rd',
+          productType: 'Commercial Solar',
+          assignedEngineer: 'Elena Rostova',
+          assignedManager: 'Amanda Torres'
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should reject role bypass attempt via request body fields with 401 UNAUTHORIZED', async () => {
+      const res = await request(app)
+        .post('/api/jobs')
+        .send({
+          userRole: 'Admin',
+          customerName: 'Body Bypass Co',
+          siteAddress: '123 Fake Rd',
+          productType: 'Commercial Solar',
+          assignedEngineer: 'Elena Rostova',
+          assignedManager: 'Amanda Torres'
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should prevent authenticated Engineer from escalating to Admin via body fields during stage override', async () => {
+      const res = await request(app)
+        .patch('/api/jobs/JOB-1001/stage')
+        .set('Authorization', `Bearer ${engineerToken}`)
+        .send({
+          newStage: 'Completion',
+          userRole: 'Admin',
+          override: true,
+          reason: 'Attempted privilege escalation via body'
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('FORBIDDEN_ACTION');
     });
   });
 

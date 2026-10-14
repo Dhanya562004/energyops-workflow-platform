@@ -40,7 +40,7 @@ export function validateStageTransition(
   userRole: string = 'Engineer',
   isOverride: boolean = false
 ): { valid: boolean; reason?: string } {
-  if (isOverride || userRole === 'Admin') {
+  if (userRole === 'Admin' || (isOverride && userRole === 'Admin')) {
     return { valid: true };
   }
 

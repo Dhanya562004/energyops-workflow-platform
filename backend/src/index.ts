@@ -12,7 +12,8 @@ import { errorHandler } from './middleware/errorHandler';
 import { authenticate, requireAuth, requireRole, generateToken, AuthUser } from './middleware/authMiddleware';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = '0.0.0.0';
 
 // Initialize Database & Seed if empty
 initDb();
@@ -113,11 +114,12 @@ app.use(errorHandler);
 
 // Start Server if direct execution
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, HOST, () => {
     console.log(`====================================================`);
     console.log(`⚡ EnergyOps Operations Platform Backend running`);
-    console.log(`👉 REST API: http://localhost:${PORT}/api/jobs`);
-    console.log(`👉 GraphQL:  http://localhost:${PORT}/graphql`);
+    console.log(`👉 Host: http://${HOST}:${PORT}`);
+    console.log(`👉 REST API: http://${HOST}:${PORT}/api/jobs`);
+    console.log(`👉 GraphQL:  http://${HOST}:${PORT}/graphql`);
     console.log(`====================================================`);
   });
 }

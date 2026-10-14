@@ -9,7 +9,16 @@ const db = new Database(dbPath);
 db.pragma('foreign_keys = ON');
 
 export function initDb() {
-  const schemaPath = path.join(__dirname, 'schema.sql');
+  const candidatePaths = [
+    path.join(__dirname, 'schema.sql'),
+    path.join(__dirname, '../../src/db/schema.sql'),
+    path.join(process.cwd(), 'src/db/schema.sql'),
+    path.join(process.cwd(), 'backend/src/db/schema.sql')
+  ];
+  const schemaPath = candidatePaths.find(p => fs.existsSync(p));
+  if (!schemaPath) {
+    throw new Error(`schema.sql not found in candidate paths: ${candidatePaths.join(', ')}`);
+  }
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
   db.exec(schemaSql);
 }
