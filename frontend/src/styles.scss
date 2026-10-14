@@ -1,10 +1,12 @@
 /* ==========================================================================
    EnergyOps Enterprise Design System & Global Styles
+   WCAG 2.1 AA Compliant - Contrast, Focus Rings & Responsive Tokens
    ========================================================================== */
 
 @import '@angular/cdk/overlay-prebuilt.css';
 
 :root, [data-theme="dark"], body.dark-theme {
+  /* Color Tokens */
   --bg-main: #0b1329;
   --bg-surface: #131f37;
   --bg-darker: #090e1a;
@@ -18,6 +20,38 @@
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
+
+  /* Spacing Tokens */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Typography Tokens */
+  --font-xs: 0.75rem;
+  --font-sm: 0.875rem;
+  --font-base: 1rem;
+  --font-lg: 1.125rem;
+  --font-xl: 1.25rem;
+  --font-2xl: 1.5rem;
+  --font-3xl: 1.875rem;
+
+  /* Border Radius Tokens */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Elevation Tokens */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.35);
+  --shadow-focus: 0 0 0 3px rgba(56, 189, 248, 0.4);
 }
 
 [data-theme="light"], body.light-theme {
@@ -34,6 +68,11 @@
   --success: #059669;
   --warning: #d97706;
   --danger: #dc2626;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(2, 132, 199, 0.35);
 }
 
 * {
@@ -48,13 +87,53 @@ body {
   color: var(--text-main);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* WCAG 2.1 AA Compliant Keyboard Focus Rings */
+:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Skip to Content Accessible Link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 10px;
+  background: var(--primary);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  z-index: 1000;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: var(--font-sm);
+  transition: top 0.2s ease;
+  &:focus {
+    top: 10px;
+  }
+}
+
+/* Screen Reader Utility Class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 /* Global Buttons */
@@ -62,10 +141,10 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 9px 16px;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
   font-weight: 700;
   cursor: pointer;
   border: none;
@@ -90,7 +169,7 @@ body {
   border: 1px solid var(--border-color);
   &:hover {
     background: var(--bg-hover);
-    border-color: #38bdf8;
+    border-color: var(--accent);
   }
 }
 
@@ -114,26 +193,13 @@ body {
 
 .btn-sm {
   padding: 5px 10px;
-  font-size: 0.78rem;
+  font-size: var(--font-xs);
 }
 
-/* Skeleton Loading Animation */
-.skeleton-loader {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-
-.skeleton-row {
-  height: 48px;
-  background: linear-gradient(90deg, var(--bg-darker) 25%, var(--bg-surface) 50%, var(--bg-darker) 75%);
-  background-size: 200% 100%;
-  animation: loadingSkeleton 1.5s infinite;
-  border-radius: 8px;
-}
-
-@keyframes loadingSkeleton {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+  .btn {
+    padding: 7px 12px;
+    font-size: var(--font-xs);
+  }
 }

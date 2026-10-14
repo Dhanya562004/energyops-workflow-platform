@@ -171,7 +171,7 @@ export interface BoardColumn {
             </div>
 
             <!-- Empty Column Placeholder -->
-            <div *ngIf="col.jobs.length === 0" class="empty-column" role="status">
+            <div *ngIf="col.jobs.length === 0" class="empty-column" role="listitem">
               <span class="empty-icon" aria-hidden="true">📂</span>
               <span>No jobs in {{ col.name }}</span>
             </div>
@@ -259,16 +259,16 @@ export interface BoardColumn {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(244, 63, 94, 0.15);
-      border: 1px solid rgba(244, 63, 94, 0.3);
+      background: rgba(190, 18, 60, 0.18);
+      border: 1px solid rgba(190, 18, 60, 0.4);
       padding: 6px 12px;
       border-radius: 8px;
       font-size: 0.78rem;
-      color: #fb7185;
+      color: #fda4af;
       font-weight: 700;
     }
     .notice-badge {
-      background: #f43f5e;
+      background: #be123c;
       color: #fff;
       padding: 2px 6px;
       border-radius: 4px;
