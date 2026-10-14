@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 import { JobService } from '../../../services/job.service';
 import { RoleService } from '../../../core/services/role.service';
 import { ToastService } from '../../../core/services/toast.service';
-import { Job, WORKFLOW_STAGES, WorkflowStage, WorkflowStatus } from '../../../models/job.model';
+import { Job, WORKFLOW_STAGES, WorkflowStage } from '../../../models/job.model';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { StageBadgeComponent } from '../../../shared/components/stage-badge/stage-badge.component';
 import { PriorityBadgeComponent } from '../../../shared/components/priority-badge/priority-badge.component';
@@ -969,7 +969,7 @@ export class JobDetailComponent implements OnInit {
         this.newNoteContent = '';
         this.store.dispatch(JobActions.loadJobDetail({ id: job.id }));
       },
-      error: (err) => {
+      error: (_err) => {
         this.toastService.error('Error', 'Failed to save field comment');
       }
     });

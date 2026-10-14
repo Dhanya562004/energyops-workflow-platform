@@ -22,6 +22,17 @@ export const WORKFLOW_STATUSES = [
 
 export type WorkflowStatus = typeof WORKFLOW_STATUSES[number];
 
+export const PRODUCT_TYPES = [
+  'Commercial Solar',
+  'Residential Battery Storage',
+  'Microgrid System',
+  'EV Charging Hub',
+  'Industrial Wind Turbine',
+  'Industrial Battery Storage'
+] as const;
+
+export type ProductType = typeof PRODUCT_TYPES[number];
+
 export function validateStageTransition(
   currentStage: string,
   targetStage: string,

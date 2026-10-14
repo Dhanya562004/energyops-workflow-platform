@@ -13,7 +13,7 @@ describe('WorkflowComponent (Kanban Board) Unit & Accessibility Tests', () => {
   let component: WorkflowComponent;
   let fixture: ComponentFixture<WorkflowComponent>;
   let store: Store;
-  let roleService: RoleService;
+  let _roleService: RoleService;
 
   const testJobs: Job[] = [
     {
@@ -71,7 +71,7 @@ describe('WorkflowComponent (Kanban Board) Unit & Accessibility Tests', () => {
     fixture = TestBed.createComponent(WorkflowComponent);
     component = fixture.componentInstance;
     store = TestBed.inject(Store);
-    roleService = TestBed.inject(RoleService);
+    _roleService = TestBed.inject(RoleService);
     fixture.detectChanges();
   });
 

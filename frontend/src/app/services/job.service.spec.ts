@@ -8,7 +8,7 @@ import { RoleService } from '../core/services/role.service';
 describe('JobService Unit & Integration Tests', () => {
   let service: JobService;
   let httpMock: HttpTestingController;
-  let roleService: RoleService;
+  let _roleService: RoleService;
 
   const mockJob: Job = {
     id: 'JOB-1001',
@@ -42,7 +42,7 @@ describe('JobService Unit & Integration Tests', () => {
 
     service = TestBed.inject(JobService);
     httpMock = TestBed.inject(HttpTestingController);
-    roleService = TestBed.inject(RoleService);
+    _roleService = TestBed.inject(RoleService);
   });
 
   afterEach(() => {

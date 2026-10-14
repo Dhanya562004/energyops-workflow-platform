@@ -1,33 +1,39 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { requireAuth, requireRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
 // PATCH /api/blockers/:id/resolve - Resolve a blocker and unblock job
-router.patch('/:id/resolve', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { resolvedBy = 'Manager', resolutionNotes } = req.body;
+router.patch(
+  '/:id/resolve',
+  requireAuth,
+  requireRole('Admin', 'Manager'),
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { resolvedBy, resolutionNotes } = req.body;
+      const effectiveResolver = req.user?.name || resolvedBy || 'Manager';
 
-    const blocker = db.prepare('SELECT * FROM blockers WHERE id = ?').get(id) as any;
-    if (!blocker) {
-      const err: AppError = new Error(`Blocker ${id} not found`);
-      err.statusCode = 404;
-      return next(err);
-    }
+      const blocker = db.prepare('SELECT * FROM blockers WHERE id = ?').get(id) as any;
+      if (!blocker) {
+        const err: AppError = new Error(`Blocker ${id} not found`);
+        err.statusCode = 404;
+        return next(err);
+      }
 
-    const now = new Date().toISOString();
+      const now = new Date().toISOString();
 
-    // Mark blocker resolved
-    db.prepare(`
-      UPDATE blockers SET
-        status = 'Resolved',
-        resolvedBy = ?,
-        resolvedAt = ?,
-        resolutionNotes = ?
-      WHERE id = ?
-    `).run(resolvedBy, now, resolutionNotes || 'Blocker resolved by operational manager.', id);
+      // Mark blocker resolved
+      db.prepare(`
+        UPDATE blockers SET
+          status = 'Resolved',
+          resolvedBy = ?,
+          resolvedAt = ?,
+          resolutionNotes = ?
+        WHERE id = ?
+      `).run(effectiveResolver, now, resolutionNotes || 'Blocker resolved by operational manager.', id);
 
     // Check if job has remaining active blockers
     const activeBlockers = db.prepare(`
@@ -51,7 +57,7 @@ router.patch('/:id/resolve', (req: Request, res: Response, next: NextFunction) =
         blocker.jobId,
         updatedJob.currentStage,
         updatedJob.currentStage,
-        resolvedBy,
+        effectiveResolver,
         `Blocker resolved: ${blocker.reason}`,
         now
       );

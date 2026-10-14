@@ -15,7 +15,7 @@ describe('JobDetailComponent Unit & Integration Tests', () => {
   let component: JobDetailComponent;
   let fixture: ComponentFixture<JobDetailComponent>;
   let store: Store;
-  let roleService: RoleService;
+  let _roleService: RoleService;
 
   const testJob: Job = {
     id: 'JOB-1001',
@@ -86,7 +86,7 @@ describe('JobDetailComponent Unit & Integration Tests', () => {
     fixture = TestBed.createComponent(JobDetailComponent);
     component = fixture.componentInstance;
     store = TestBed.inject(Store);
-    roleService = TestBed.inject(RoleService);
+    _roleService = TestBed.inject(RoleService);
     fixture.detectChanges();
   });
 

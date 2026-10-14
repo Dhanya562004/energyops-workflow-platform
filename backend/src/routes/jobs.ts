@@ -2,6 +2,13 @@ import { Router, Request, Response, NextFunction } from 'express';
 import db from '../db/database';
 import { validateStageTransition, WORKFLOW_STAGES } from '../utils/workflow';
 import { AppError } from '../middleware/errorHandler';
+import { requireAuth, requireRole } from '../middleware/authMiddleware';
+import {
+  validateJobCreate,
+  validateStageTransitionInput,
+  validateStatusUpdate,
+  validateBlockerCreate
+} from '../middleware/validationMiddleware';
 
 const router = Router();
 
@@ -26,8 +33,8 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
     const limitNum = parseInt(limit as string, 10) || 10;
     const offset = (pageNum - 1) * limitNum;
 
-    let whereConditions: string[] = [];
-    let params: any[] = [];
+    const whereConditions: string[] = [];
+    const params: any[] = [];
 
     if (search) {
       whereConditions.push(`(
@@ -154,7 +161,7 @@ router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // POST /api/jobs - Create new job
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireAuth, requireRole('Admin', 'Manager'), validateJobCreate, (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
       customerName,
@@ -165,16 +172,10 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       currentStage = 'Site Assessment',
       priority = 'Medium',
       targetCompletionDate,
-      estimatedHours = 100,
-      userRole = 'Manager'
+      estimatedHours = 100
     } = req.body;
 
-    if (!customerName || !siteAddress || !productType || !assignedEngineer || !assignedManager) {
-      const err: AppError = new Error('Missing required job fields (customerName, siteAddress, productType, assignedEngineer, assignedManager)');
-      err.statusCode = 400;
-      err.code = 'VALIDATION_ERROR';
-      return next(err);
-    }
+    const manager = assignedManager || (req.user ? req.user.name : 'Operations Manager');
 
     const id = `JOB-${1000 + Math.floor(Math.random() * 9000)}`;
     const now = new Date().toISOString();
@@ -189,7 +190,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
     `);
 
     insertStmt.run(
-      id, customerName, siteAddress, productType, assignedEngineer, assignedManager,
+      id, customerName, siteAddress, productType, assignedEngineer, manager,
       currentStage, 'In Progress', priority, now, now, defaultTarget,
       null, 'Pending', 0, estimatedHours, 0
     );
@@ -199,7 +200,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    histStmt.run(`HIST-${Date.now()}`, id, null, currentStage, null, 'In Progress', assignedManager, 'Job created', now);
+    histStmt.run(`HIST-${Date.now()}`, id, null, currentStage, null, 'In Progress', manager, 'Job created', now);
 
     const createdJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
 
@@ -214,7 +215,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // PUT /api/jobs/:id - Update job fields
-router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', requireAuth, requireRole('Admin', 'Manager'), (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const existing = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
@@ -277,229 +278,254 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // PATCH /api/jobs/:id/stage - Workflow stage transition with validation
-router.patch('/:id/stage', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { newStage, userRole = 'Engineer', userName = 'System User', override = false, reason } = req.body;
+router.patch(
+  '/:id/stage',
+  requireAuth,
+  requireRole('Admin', 'Manager', 'Engineer'),
+  validateStageTransitionInput,
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { newStage, userRole, userName, override = false, reason } = req.body;
 
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
-    if (!job) {
-      const err: AppError = new Error(`Job ${id} not found`);
-      err.statusCode = 404;
-      return next(err);
+      const effectiveRole = req.user?.role || userRole || 'Engineer';
+      const effectiveName = req.user?.name || userName || 'System User';
+
+      const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
+      if (!job) {
+        const err: AppError = new Error(`Job ${id} not found`);
+        err.statusCode = 404;
+        return next(err);
+      }
+
+      const validation = validateStageTransition(
+        job.currentStage,
+        newStage,
+        job.status,
+        effectiveRole,
+        override
+      );
+
+      if (!validation.valid) {
+        const err: AppError = new Error(validation.reason || 'Invalid stage transition');
+        err.statusCode = 400;
+        err.code = 'INVALID_STAGE_TRANSITION';
+        return next(err);
+      }
+
+      const now = new Date().toISOString();
+
+      // Auto-update status if moving to Completion
+      let updatedStatus = job.status;
+      if (newStage === 'Completion') {
+        updatedStatus = 'Completed';
+      } else if (job.status === 'Completed') {
+        updatedStatus = 'In Progress';
+      }
+
+      // Auto-update progress %
+      const stageIndex = WORKFLOW_STAGES.indexOf(newStage as any);
+      const progressPct = Math.round(((stageIndex + 1) / WORKFLOW_STAGES.length) * 100);
+
+      const updateStmt = db.prepare(`
+        UPDATE jobs SET
+          currentStage = ?,
+          status = ?,
+          installationProgress = ?,
+          updatedAt = ?
+        WHERE id = ?
+      `);
+      updateStmt.run(newStage, updatedStatus, progressPct, now, id);
+
+      // Audit log history
+      const histStmt = db.prepare(`
+        INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      histStmt.run(
+        `HIST-${Date.now()}`,
+        id,
+        job.currentStage,
+        newStage,
+        job.status,
+        updatedStatus,
+        effectiveName,
+        reason || `Transitioned stage from ${job.currentStage} to ${newStage}`,
+        now
+      );
+
+      const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
+
+      res.json({
+        success: true,
+        data: updatedJob,
+        message: `Job ${id} stage updated to ${newStage}`
+      });
+    } catch (err) {
+      next(err);
     }
-
-    const validation = validateStageTransition(
-      job.currentStage,
-      newStage,
-      job.status,
-      userRole,
-      override
-    );
-
-    if (!validation.valid) {
-      const err: AppError = new Error(validation.reason || 'Invalid stage transition');
-      err.statusCode = 400;
-      err.code = 'INVALID_STAGE_TRANSITION';
-      return next(err);
-    }
-
-    const now = new Date().toISOString();
-
-    // Auto-update status if moving to Completion
-    let updatedStatus = job.status;
-    if (newStage === 'Completion') {
-      updatedStatus = 'Completed';
-    } else if (job.status === 'Completed') {
-      updatedStatus = 'In Progress';
-    }
-
-    // Auto-update progress %
-    const stageIndex = WORKFLOW_STAGES.indexOf(newStage as any);
-    const progressPct = Math.round(((stageIndex + 1) / WORKFLOW_STAGES.length) * 100);
-
-    const updateStmt = db.prepare(`
-      UPDATE jobs SET
-        currentStage = ?,
-        status = ?,
-        installationProgress = ?,
-        updatedAt = ?
-      WHERE id = ?
-    `);
-    updateStmt.run(newStage, updatedStatus, progressPct, now, id);
-
-    // Audit log history
-    const histStmt = db.prepare(`
-      INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    histStmt.run(
-      `HIST-${Date.now()}`,
-      id,
-      job.currentStage,
-      newStage,
-      job.status,
-      updatedStatus,
-      userName,
-      reason || `Transitioned stage from ${job.currentStage} to ${newStage}`,
-      now
-    );
-
-    const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
-
-    res.json({
-      success: true,
-      data: updatedJob,
-      message: `Job ${id} stage updated to ${newStage}`
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // PATCH /api/jobs/:id/status - Update status directly
-router.patch('/:id/status', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { status, blockerReason, userName = 'System User' } = req.body;
+router.patch(
+  '/:id/status',
+  requireAuth,
+  requireRole('Admin', 'Manager', 'Engineer'),
+  validateStatusUpdate,
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { status, blockerReason, userName } = req.body;
+      const effectiveName = req.user?.name || userName || 'System User';
 
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
-    if (!job) {
-      const err: AppError = new Error(`Job ${id} not found`);
-      err.statusCode = 404;
-      return next(err);
-    }
+      const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
+      if (!job) {
+        const err: AppError = new Error(`Job ${id} not found`);
+        err.statusCode = 404;
+        return next(err);
+      }
 
-    const now = new Date().toISOString();
+      const now = new Date().toISOString();
 
-    if (status === 'Blocked' && blockerReason) {
-      // Add blocker entry
-      const blockerStmt = db.prepare(`
-        INSERT INTO blockers (id, jobId, reason, status, createdBy, createdAt)
-        VALUES (?, ?, ?, 'Active', ?, ?)
+      if (status === 'Blocked' && blockerReason) {
+        // Add blocker entry
+        const blockerStmt = db.prepare(`
+          INSERT INTO blockers (id, jobId, reason, status, createdBy, createdAt)
+          VALUES (?, ?, ?, 'Active', ?, ?)
+        `);
+        blockerStmt.run(`BLK-${Date.now()}`, id, blockerReason, effectiveName, now);
+
+        // Create critical alert
+        const alertStmt = db.prepare(`
+          INSERT INTO alerts (id, jobId, type, severity, message, status, createdAt)
+          VALUES (?, ?, 'Job Blocked', 'CRITICAL', ?, 'Active', ?)
+        `);
+        alertStmt.run(`ALT-${Date.now()}`, id, `Job ${id} was marked as BLOCKED: ${blockerReason}`, now);
+      }
+
+      const updateStmt = db.prepare(`
+        UPDATE jobs SET status = ?, blockerReason = ?, updatedAt = ? WHERE id = ?
       `);
-      blockerStmt.run(`BLK-${Date.now()}`, id, blockerReason, userName, now);
+      updateStmt.run(status, status === 'Blocked' ? blockerReason : null, now, id);
 
-      // Create critical alert
-      const alertStmt = db.prepare(`
-        INSERT INTO alerts (id, jobId, type, severity, message, status, createdAt)
-        VALUES (?, ?, 'Job Blocked', 'CRITICAL', ?, 'Active', ?)
+      // Audit log
+      const histStmt = db.prepare(`
+        INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      alertStmt.run(`ALT-${Date.now()}`, id, `Job ${id} was marked as BLOCKED: ${blockerReason}`, now);
+      histStmt.run(`HIST-${Date.now()}`, id, job.currentStage, job.currentStage, job.status, status, effectiveName, `Status changed to ${status}`, now);
+
+      const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
+
+      res.json({
+        success: true,
+        data: updatedJob,
+        message: `Job ${id} status updated to ${status}`
+      });
+    } catch (err) {
+      next(err);
     }
-
-    const updateStmt = db.prepare(`
-      UPDATE jobs SET status = ?, blockerReason = ?, updatedAt = ? WHERE id = ?
-    `);
-    updateStmt.run(status, status === 'Blocked' ? blockerReason : null, now, id);
-
-    // Audit log
-    const histStmt = db.prepare(`
-      INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    histStmt.run(`HIST-${Date.now()}`, id, job.currentStage, job.currentStage, job.status, status, userName, `Status changed to ${status}`, now);
-
-    const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
-
-    res.json({
-      success: true,
-      data: updatedJob,
-      message: `Job ${id} status updated to ${status}`
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // POST /api/jobs/:id/blockers - Flag a blocker
-router.post('/:id/blockers', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { reason, createdBy = 'Engineer' } = req.body;
+router.post(
+  '/:id/blockers',
+  requireAuth,
+  requireRole('Admin', 'Manager', 'Engineer'),
+  validateBlockerCreate,
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { reason, createdBy } = req.body;
+      const effectiveName = req.user?.name || createdBy || 'Engineer';
 
-    if (!reason) {
-      const err: AppError = new Error('Blocker reason is required');
-      err.statusCode = 400;
-      return next(err);
+      const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
+      if (!job) {
+        const err: AppError = new Error(`Job ${id} not found`);
+        err.statusCode = 404;
+        return next(err);
+      }
+
+      const now = new Date().toISOString();
+      const blockerId = `BLK-${Date.now()}`;
+
+      // Insert blocker
+      db.prepare(`
+        INSERT INTO blockers (id, jobId, reason, status, createdBy, createdAt)
+        VALUES (?, ?, ?, 'Active', ?, ?)
+      `).run(blockerId, id, reason, effectiveName, now);
+
+      // Update job status to Blocked
+      db.prepare(`
+        UPDATE jobs SET status = 'Blocked', blockerReason = ?, updatedAt = ? WHERE id = ?
+      `).run(reason, now, id);
+
+      // Log alert
+      db.prepare(`
+        INSERT INTO alerts (id, jobId, type, severity, message, status, createdAt)
+        VALUES (?, ?, 'Job Blocked', 'CRITICAL', ?, 'Active', ?)
+      `).run(`ALT-${Date.now()}`, id, `Job ${id} is BLOCKED: ${reason}`, now);
+
+      // Log history
+      db.prepare(`
+        INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
+        VALUES (?, ?, ?, ?, ?, 'Blocked', ?, ?, ?)
+      `).run(`HIST-${Date.now()}`, id, job.currentStage, job.currentStage, job.status, effectiveName, `Blocker flagged: ${reason}`, now);
+
+      const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
+
+      res.status(201).json({
+        success: true,
+        data: updatedJob,
+        message: `Blocker recorded for job ${id}`
+      });
+    } catch (err) {
+      next(err);
     }
-
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id) as any;
-    if (!job) {
-      const err: AppError = new Error(`Job ${id} not found`);
-      err.statusCode = 404;
-      return next(err);
-    }
-
-    const now = new Date().toISOString();
-    const blockerId = `BLK-${Date.now()}`;
-
-    // Insert blocker
-    db.prepare(`
-      INSERT INTO blockers (id, jobId, reason, status, createdBy, createdAt)
-      VALUES (?, ?, ?, 'Active', ?, ?)
-    `).run(blockerId, id, reason, createdBy, now);
-
-    // Update job status to Blocked
-    db.prepare(`
-      UPDATE jobs SET status = 'Blocked', blockerReason = ?, updatedAt = ? WHERE id = ?
-    `).run(reason, now, id);
-
-    // Log alert
-    db.prepare(`
-      INSERT INTO alerts (id, jobId, type, severity, message, status, createdAt)
-      VALUES (?, ?, 'Job Blocked', 'CRITICAL', ?, 'Active', ?)
-    `).run(`ALT-${Date.now()}`, id, `Job ${id} is BLOCKED: ${reason}`, now);
-
-    // Log history
-    db.prepare(`
-      INSERT INTO job_history (id, jobId, previousStage, newStage, previousStatus, newStatus, changedBy, changeReason, createdAt)
-      VALUES (?, ?, ?, ?, ?, 'Blocked', ?, ?, ?)
-    `).run(`HIST-${Date.now()}`, id, job.currentStage, job.currentStage, job.status, createdBy, `Blocker flagged: ${reason}`, now);
-
-    const updatedJob = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
-
-    res.status(201).json({
-      success: true,
-      data: updatedJob,
-      message: `Blocker recorded for job ${id}`
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // POST /api/jobs/:id/notes - Add note
-router.post('/:id/notes', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { author, role, content } = req.body;
+router.post(
+  '/:id/notes',
+  requireAuth,
+  requireRole('Admin', 'Manager', 'Engineer'),
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { author, role, content } = req.body;
 
-    if (!author || !content) {
-      const err: AppError = new Error('Author and content are required');
-      err.statusCode = 400;
-      return next(err);
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        const err: AppError = new Error('content is required');
+        err.statusCode = 400;
+        return next(err);
+      }
+
+      const effectiveAuthor = req.user?.name || author || 'User';
+      const effectiveRole = req.user?.role || role || 'Engineer';
+
+      const now = new Date().toISOString();
+      const noteId = `NTE-${Date.now()}`;
+
+      db.prepare(`
+        INSERT INTO job_notes (id, jobId, author, role, content, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(noteId, id, effectiveAuthor, effectiveRole, content, now);
+
+      const notes = db.prepare('SELECT * FROM job_notes WHERE jobId = ? ORDER BY createdAt DESC').all(id);
+
+      res.status(201).json({
+        success: true,
+        data: notes,
+        message: 'Note added successfully'
+      });
+    } catch (err) {
+      next(err);
     }
-
-    const now = new Date().toISOString();
-    const noteId = `NTE-${Date.now()}`;
-
-    db.prepare(`
-      INSERT INTO job_notes (id, jobId, author, role, content, createdAt)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(noteId, id, author, role || 'Engineer', content, now);
-
-    const notes = db.prepare('SELECT * FROM job_notes WHERE jobId = ? ORDER BY createdAt DESC').all(id);
-
-    res.status(201).json({
-      success: true,
-      data: notes,
-      message: 'Note added successfully'
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // GET /api/jobs/:id/history - Get audit history
 router.get('/:id/history', (req: Request, res: Response, next: NextFunction) => {

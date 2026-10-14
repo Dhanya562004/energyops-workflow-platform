@@ -47,7 +47,7 @@ export class JobEffects {
       ofType(JobActions.updateJobStage),
       switchMap(({ id, newStage, override, reason }) =>
         this.jobService.updateStage(id, newStage, override, reason).pipe(
-          tap(res => {
+          tap(() => {
             this.toastService.success(
               'Stage Advanced',
               `Job ${id} transitioned to "${newStage}" successfully.`
@@ -69,7 +69,7 @@ export class JobEffects {
       ofType(JobActions.updateJobStatus),
       switchMap(({ id, status, blockerReason }) =>
         this.jobService.updateStatus(id, status, blockerReason).pipe(
-          tap(res => {
+          tap(() => {
             this.toastService.success(
               'Status Updated',
               `Job ${id} status updated to "${status}".`
@@ -89,9 +89,9 @@ export class JobEffects {
   resolveBlocker$ = createEffect(() =>
     this.actions$.pipe(
       ofType(JobActions.resolveBlocker),
-      switchMap(({ blockerId, jobId, resolutionNotes }) =>
+      switchMap(({ blockerId, resolutionNotes }) =>
         this.jobService.resolveBlocker(blockerId, resolutionNotes || '').pipe(
-          tap(res => {
+          tap(() => {
             this.toastService.success(
               'Blocker Resolved',
               `Blocker resolved. Job status resumed.`
